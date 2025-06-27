@@ -1,3 +1,5 @@
+import { loadJWT } from './jwt.js';
+
 const DOMAIN = 'zone01normandie.org'; // remplace par le vrai domaine
 const GRAPHQL_URL = `https://${DOMAIN}/api/graphql-engine/v1/graphql`;
 const SIGNIN_URL = `https://${DOMAIN}/api/auth/signin`;
@@ -22,12 +24,12 @@ export async function signin(usernameOrEmail, password) {
   return jwt;
 }
 
-export async function graphqlQuery(token, query) {
+export async function graphqlQuery(query) {
   const res = await fetch(GRAPHQL_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${loadJWT()}`,
     },
     body: JSON.stringify({ query }),
   });
