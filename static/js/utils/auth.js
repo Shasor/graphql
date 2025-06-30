@@ -1,6 +1,6 @@
 import { state } from '../main.js';
 import { graphqlQuery } from './api.js';
-import { USER_INFO_QUERY, USER_MODULE_QUERY, USER_XP_LEVEL_QUERY, USER_XP_QUERY } from './queries.js';
+import { USER_AUDIT_QUERY, USER_INFO_QUERY, USER_MODULE_QUERY, USER_XP_LEVEL_QUERY, USER_XP_QUERY } from './queries.js';
 
 const app = document.body;
 
@@ -24,13 +24,19 @@ export async function showProfile() {
 }
 
 export async function loadState() {
-  const modules = await graphqlQuery(USER_MODULE_QUERY);
-  state.userModules = modules.user[0].events;
-  if (!state.currentModule) state.currentModule = state.userModules[0].event.id;
-  state.userInfo = await graphqlQuery(USER_INFO_QUERY);
-  state.userAttrs = state.userInfo.user[0].attrs;
+  if (!state.currentModule) {
+    const modules = await graphqlQuery(USER_MODULE_QUERY);
+    state.user.modules = modules.user[0].events;
+    state.currentModule = state.user.modules[0].event.id;
+  }
+  state.user.info = await graphqlQuery(USER_INFO_QUERY);
+  state.user.xp.up = state.user.info.user[0].totalUp;
+  state.user.xp.down = state.user.info.user[0].totalDown;
+  state.user.attrs = state.user.info.user[0].attrs;
   const xp = await graphqlQuery(USER_XP_QUERY(state.currentModule));
-  state.userXP = xp.transaction_aggregate.aggregate.sum.amount;
-  const level = await graphqlQuery(USER_XP_LEVEL_QUERY(state.userInfo.user[0].login, state.currentModule));
-  state.userXPlevel = level.event_user[0].level;
+  state.user.xp.amount = xp.transaction_aggregate.aggregate.sum.amount;
+  const level = await graphqlQuery(USER_XP_LEVEL_QUERY(state.user.info.user[0].login, state.currentModule));
+  state.user.xp.level = level.event_user[0].level;
+  const audits = await graphqlQuery(USER_AUDIT_QUERY(state.user.info.user[0].login, true));
+  state.user.audits = audits.audit;
 }

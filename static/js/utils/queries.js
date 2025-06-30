@@ -69,7 +69,7 @@ export const USER_XP_PER_PROJECT_QUERY = (eventID) => {
 			}
             `;
 };
-export const USER_AUDIT_QUERY = (userName, onlyLast = false) => {
+export const USER_AUDIT_QUERY = (userName) => {
   return `
                 query {
                     audit(
@@ -79,20 +79,14 @@ export const USER_AUDIT_QUERY = (userName, onlyLast = false) => {
 								{grade: {_is_null: false}}
                             ]
                         }
-                        ${onlyLast ? ', limit: 1' : ''},
                         order_by: {group: {createdAt: desc}}
                     ) {
-                        private {
-                            code 
-                        }
                         grade
-                        resultId
                         group {
                             captainLogin
                             createdAt
                             object {
                                 name
-                                type
                             }
                         }
                     }

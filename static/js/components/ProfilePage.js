@@ -1,6 +1,7 @@
 import { state } from '../main.js';
 import { loadState } from '../utils/auth.js';
 import { removeJWT } from '../utils/jwt.js';
+import { ConvertXpToStr } from '../utils/others.js';
 import { Base } from './Base.js';
 
 export class ProfilePage extends Base {
@@ -40,7 +41,7 @@ export class ProfilePage extends Base {
 
     const h1 = document.createElement('h1');
     h1.className = 'text-2xl font-bold text-primary';
-    h1.textContent = `Welcome ${this.userAttrs.firstName} ${this.userAttrs.lastName} !`;
+    h1.textContent = `Welcome ${this.user.attrs.firstName} ${this.user.attrs.lastName} !`;
     section.appendChild(h1);
 
     const div = document.createElement('div');
@@ -65,8 +66,8 @@ export class ProfilePage extends Base {
     const modulesDiv = document.createElement('div');
     modulesDiv.className = 'flex flex-1';
     el.appendChild(modulesDiv);
-    for (let i = 0; i < this.userModules.length; i++) {
-      const e = this.userModules[i];
+    for (let i = 0; i < this.user.modules.length; i++) {
+      const e = this.user.modules[i];
       const btn = document.createElement('div');
       btn.textContent = e.event.object.name;
       btn.setAttribute('data-module-id', e.event.id);
@@ -75,7 +76,7 @@ export class ProfilePage extends Base {
       // Coins arrondis uniquement sur les extrémités
       if (i === 0) {
         classes += ' rounded-l-lg';
-      } else if (i === this.userModules.length - 1) {
+      } else if (i === this.user.modules.length - 1) {
         classes += ' rounded-r-lg';
       }
 
@@ -92,10 +93,11 @@ export class ProfilePage extends Base {
 
   renderUserStats(el) {
     const userStatsDiv = document.createElement('div');
-    userStatsDiv.className = 'flex';
+    userStatsDiv.className = 'flex gap-4 items-center';
     el.appendChild(userStatsDiv);
     // user level card
     this.renderUserLevelCard(userStatsDiv);
+    this.renderAuditsRatio(userStatsDiv);
   }
 
   renderUserLevelCard(el) {
@@ -111,7 +113,7 @@ export class ProfilePage extends Base {
 
     // Texte XP
     const xp = document.createElement('div');
-    xp.textContent = `${this.userXP >= 1000000 ? `${(this.userXP / 1000000).toFixed(2)} MB` : `${(this.userXP / 1000).toFixed(0)} kB`}`;
+    xp.textContent = ConvertXpToStr(this.user.xp.amount);
     xp.className = 'text-gray-700 text-base mb-2';
     container.appendChild(xp);
 
@@ -166,7 +168,7 @@ export class ProfilePage extends Base {
     levelText.className = 'absolute inset-0 flex flex-col justify-center items-center text-gray-700 font-mono';
     levelText.innerHTML = `
   <div class="text-xs">Level</div>
-  <div class="text-2xl">${this.userXPlevel}</div>
+  <div class="text-2xl">${this.user.xp.level}</div>
 `;
 
     circleWrapper.appendChild(levelText);
@@ -176,6 +178,71 @@ export class ProfilePage extends Base {
 
     // Ajoute le tout au body ou à ton div cible
     el.appendChild(container);
+  }
+
+  renderAuditsRatio(el) {
+    // main container
+    const container = document.createElement('div');
+    container.className = 'flex flex-col flex-1 bg-stone-700 rounded-lg size-fit p-3 gap-4';
+    el.appendChild(container);
+    // title div
+    const title = document.createElement('div');
+    title.className = 'text-lg font-semibold';
+    title.textContent = 'Audits Ratio';
+    container.appendChild(title);
+    // bars div
+    const bars = document.createElement('div');
+    bars.className = 'flex flex-col gap-4';
+    container.appendChild(bars);
+    // 1st bar
+    const done = document.createElement('div');
+    bars.appendChild(done);
+    // 1st bar: label
+    const doneLabel = document.createElement('div');
+    doneLabel.className = 'text-green-600';
+    doneLabel.textContent = `Done: ${ConvertXpToStr(this.user.xp.up)}`;
+    done.appendChild(doneLabel);
+    // 1st bar: bar
+    const bar1 = document.createElement('div');
+    bar1.className = 'bg-stone-600 w-full h-[1rem] rounded-lg';
+    done.appendChild(bar1);
+    // color
+    const green = document.createElement('div');
+    green.className = 'bg-green-600 h-[1rem] rounded-lg';
+    green.style.width = `${this.user.xp.up > this.user.xp.down ? '100%' : `${(this.user.xp.up / this.user.xp.down) * 100}%`}`;
+    bar1.appendChild(green);
+    // 1st bar
+    const received = document.createElement('div');
+    bars.appendChild(received);
+    // 1st bar: label
+    const receivedLabel = document.createElement('div');
+    receivedLabel.className = 'text-red-600';
+    receivedLabel.textContent = `Received: ${ConvertXpToStr(this.user.xp.down)}`;
+    received.appendChild(receivedLabel);
+    // 1st bar: bar
+    const bar2 = document.createElement('div');
+    bar2.className = 'bg-stone-600 w-full h-[1rem] rounded-lg';
+    received.appendChild(bar2);
+    // color
+    const red = document.createElement('div');
+    red.className = 'bg-red-600 h-[1rem] rounded-lg';
+    red.style.width = `${this.user.xp.down > this.user.xp.up ? '100%' : `${(this.user.xp.down / this.user.xp.up) * 100}%`}`;
+    bar2.appendChild(red);
+    // ratio
+    const ratioValue = (Math.ceil((this.user.xp.up / this.user.xp.down) * 10) / 10).toFixed(1);
+    const ratio = document.createElement('div');
+    ratio.className = `flex items-end ${ratioValue < 1 ? 'text-yellow-700' : 'text-green-600'}`;
+    container.appendChild(ratio);
+    // ratio value
+    const ratioDiv = document.createElement('div');
+    ratioDiv.className = 'text-[4rem] leading-[0.9]';
+    ratioDiv.textContent = ratioValue;
+    ratio.appendChild(ratioDiv);
+    // ratio text
+    const ratioText = document.createElement('div');
+    ratioText.className = 'ml-2';
+    ratioText.textContent = ratioValue < 1 ? 'Make more audits!' : 'Good job!';
+    ratio.appendChild(ratioText);
   }
 
   afterRender() {

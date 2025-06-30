@@ -6,11 +6,18 @@ import { isJwtValid, loadJWT, removeJWT } from './utils/jwt.js';
 
 export const state = {
   currentModule: null,
-  userModules: null,
-  userInfo: null,
-  userAttrs: null,
-  userXP: null,
-  userXPlevel: null,
+  user: {
+    modules: null,
+    info: null,
+    attrs: null,
+    xp: {
+      amount: null,
+      level: null,
+      up: null,
+      down: null,
+    },
+    audits: null,
+  },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
