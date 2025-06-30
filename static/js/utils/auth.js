@@ -1,5 +1,6 @@
 import { state } from '../main.js';
 import { graphqlQuery } from './api.js';
+import { CreateLoadingBtn } from './others.js';
 import { USER_AUDIT_QUERY, USER_INFO_QUERY, USER_MODULE_QUERY, USER_XP_LEVEL_QUERY, USER_XP_QUERY } from './queries.js';
 
 const app = document.body;
@@ -24,6 +25,8 @@ export async function showProfile() {
 }
 
 export async function loadState() {
+  const loading = CreateLoadingBtn();
+  document.body.appendChild(loading);
   if (!state.currentModule) {
     const modules = await graphqlQuery(USER_MODULE_QUERY);
     state.user.modules = modules.user[0].events;
@@ -39,4 +42,5 @@ export async function loadState() {
   state.user.xp.level = level.event_user[0].level;
   const audits = await graphqlQuery(USER_AUDIT_QUERY(state.user.info.user[0].login, true));
   state.user.audits = audits.audit;
+  loading.remove();
 }

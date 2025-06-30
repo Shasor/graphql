@@ -1,4 +1,5 @@
 import { LoginForm } from './components/LoginForm.js';
+import { ModalElement } from './components/modal.js';
 import { ProfilePage } from './components/ProfilePage.js';
 import { Section } from './components/Section.js';
 import { showLogin, showProfile } from './utils/auth.js';
@@ -33,3 +34,4 @@ document.addEventListener('DOMContentLoaded', () => {
 customElements.define('c-form', LoginForm);
 customElements.define('c-profile', ProfilePage);
 customElements.define('c-section', Section);
+customElements.define('c-modal', ModalElement);

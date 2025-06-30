@@ -98,6 +98,7 @@ export class ProfilePage extends Base {
     // user level card
     this.renderUserLevelCard(userStatsDiv);
     this.renderAuditsRatio(userStatsDiv);
+    this.renderLastAudit(userStatsDiv);
   }
 
   renderUserLevelCard(el) {
@@ -245,7 +246,65 @@ export class ProfilePage extends Base {
     ratio.appendChild(ratioText);
   }
 
+  renderLastAudit(el) {
+    console.log(this.user.audits);
+    el.appendChild(this.createAuditCard(this.user.audits[0], true));
+  }
+
+  createAuditCard(audit, seeMore = false) {
+    // main container
+    const container = document.createElement('div');
+    container.className = 'flex flex-col flex-1 bg-stone-700 rounded-lg p-3 gap-4';
+    // header
+    if (seeMore) {
+      const header = document.createElement('div');
+      header.className = 'flex justify-between';
+      container.appendChild(header);
+      // title in header
+      const title = document.createElement('div');
+      title.className = 'text-lg font-semibold self-center';
+      title.textContent = 'Last Audit';
+      header.appendChild(title);
+      // see more
+
+      const more = document.createElement('div');
+      more.id = 'more-audit-btn';
+      more.className = 'text-violet-500 hover:underline';
+      more.textContent = 'See more';
+      header.appendChild(more);
+    }
+    // string: project - name
+    const projectStr = document.createElement('div');
+    projectStr.className = 'self-center';
+    projectStr.textContent = `${audit.group.object.name} - ${audit.group.captainLogin}`;
+    container.appendChild(projectStr);
+    // date
+    const dateRegex = audit.group.createdAt.match(/(\d{4})-(\d{2})-(\d{2})/);
+    const dateStr = document.createElement('div');
+    dateStr.className = 'self-center';
+    dateStr.textContent = `Date: ${dateRegex[3]}/${dateRegex[2]}/${dateRegex[1]}`;
+    container.appendChild(dateStr);
+    // status
+    const status = document.createElement('div');
+    status.className = `self-center ${audit.grade >= 1 ? 'text-green-600' : 'text-red-600'}`;
+    status.textContent = audit.grade >= 1 ? 'PASSED' : 'FAILED';
+    container.appendChild(status);
+    return container;
+  }
+
   afterRender() {
+    // see more audits
+    this.querySelector('#more-audit-btn').addEventListener('click', () => {
+      const modal = document.createElement('c-modal');
+      const div = document.createElement('div');
+      div.className = 'p-4 overflow-y-auto bg-stone-800 rounded-lg max-h-7/8 max-w-3/4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5';
+      modal.appendChild(div);
+      this.user.audits.forEach((e) => {
+        div.appendChild(this.createAuditCard(e));
+      });
+      document.body.appendChild(modal);
+    });
+    // logout
     this.querySelector('#logoutBtn').addEventListener('click', () => {
       removeJWT();
       this.dispatchEvent(new CustomEvent('logout', { bubbles: true }));
