@@ -2,5 +2,12 @@
   "dependencies": {
     "@tailwindcss/cli": "^4.1.10",
     "tailwindcss": "^4.1.10"
+  },
+  "scripts": {
+    "build": "cp -r static/ index.html favicon.ico dist/ && tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
+    "deploy": "gh-pages -d dist -v .gitignore -v node_modules"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
