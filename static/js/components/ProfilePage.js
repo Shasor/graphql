@@ -1,7 +1,8 @@
+import { state } from '../main.js';
 import { updateState } from '../utils/auth.js';
 import { saveModule } from '../utils/current_module.js';
 import { removeJWT } from '../utils/jwt.js';
-import { ConvertXpToStr } from '../utils/others.js';
+import { ConvertXpToStr, getDateRegex } from '../utils/others.js';
 import { Base } from './Base.js';
 
 export class ProfilePage extends Base {
@@ -28,11 +29,19 @@ export class ProfilePage extends Base {
     this.addSpacing(section);
     // one line section : level card, last audit (+btn more) and ratio
     this.renderUserStats(section);
+    // spacing
+    this.addSpacing(section);
+    // graph selection
+    this.renderGraphSelection(section);
+    // spacing
+    this.addSpacing(section);
+    // graph
+    this.renderGraph(section);
   }
 
   renderHeader(el) {
     const header = document.createElement('header');
-    header.className = 'sticky top-0 py-4 border-b z-10';
+    header.className = 'py-4 border-b z-10';
     el.appendChild(header);
 
     const section = document.createElement('c-section');
@@ -273,10 +282,9 @@ export class ProfilePage extends Base {
     projectStr.textContent = `${audit.group.object.name} - ${audit.group.captainLogin}`;
     container.appendChild(projectStr);
     // date
-    const dateRegex = audit.group.createdAt.match(/(\d{4})-(\d{2})-(\d{2})/);
     const dateStr = document.createElement('div');
     dateStr.className = 'self-center';
-    dateStr.textContent = `Date: ${dateRegex[3]}/${dateRegex[2]}/${dateRegex[1]}`;
+    dateStr.textContent = `Date: ${getDateRegex(audit.group.createdAt)}`;
     container.appendChild(dateStr);
     // status
     const status = document.createElement('div');
@@ -284,6 +292,419 @@ export class ProfilePage extends Base {
     status.textContent = audit.grade >= 1 ? 'PASSED' : 'FAILED';
     container.appendChild(status);
     return container;
+  }
+
+  renderGraphSelection(el) {
+    const graphs = [
+      { str: 'XP by Project', type: 'project' },
+      { str: 'XP in Time', type: 'timeline' },
+    ];
+    const graphsBtn = document.createElement('div');
+    graphsBtn.className = 'flex flex-1';
+    el.appendChild(graphsBtn);
+    for (let i = 0; i < graphs.length; i++) {
+      const e = graphs[i];
+      const btn = document.createElement('div');
+      btn.id = `graph-btn-${e.type}`;
+      btn.textContent = e.str;
+      btn.setAttribute('data-graph-id', e.type);
+      // Classes de base
+      let classes = `flex-1 ${this.currentGraph == e.type ? 'bg-red-600' : 'bg-stone-700 hover:bg-stone-600'} p-2 text-center ${i !== 0 ? 'border-l border-black' : ''}`;
+      // Coins arrondis uniquement sur les extrémités
+      if (i === 0) {
+        classes += ' rounded-l-lg';
+      } else if (i === graphs.length - 1) {
+        classes += ' rounded-r-lg';
+      }
+
+      btn.className = classes;
+      graphsBtn.appendChild(btn);
+    }
+  }
+
+  renderGraph(el) {
+    if (this.currentGraph == 'project') this.renderXPGraph(el, this.user.xp.project);
+    else this.renderXPTimelineGraph(el, this.user.xp.project);
+  }
+
+  renderXPGraph(el, data) {
+    const container = document.createElement('div');
+    container.className = 'flex flex-col relative pt-4 bg-stone-700 rounded-lg';
+    el.appendChild(container);
+    // Early return if no data or empty array
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p>No project data available for this module.</p>';
+      return;
+    }
+
+    // Sort data by creation date (newest first)
+    const sortedData = [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Define graph dimensions and margins
+    const margin = { top: 80, right: 30, bottom: 60, left: 80 };
+    const width = 800 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    // Find maximum XP value for scaling
+    const maxXP = Math.max(...sortedData.map((d) => d.amount));
+
+    // Calculate bar width based on data length - ensure minimum width for visibility
+    const barWidth = Math.max(4, Math.min(50, width / sortedData.length - 2));
+
+    // graph title
+    const graphTitle = document.createElement('h3');
+    graphTitle.className = 'self-center';
+    graphTitle.textContent = 'XP by Project (Oldest to Newest)';
+    container.appendChild(graphTitle);
+    // info popup
+    const infoPanel = document.createElement('div');
+    infoPanel.className = 'absolute bg-stone-600 top-[100px] left-1/2 -translate-x-1/2 w-2xs py-2 px-4 text-center rounded-lg hidden';
+    container.appendChild(infoPanel);
+    // info popup: name
+    const projectNameEl = document.createElement('div');
+    infoPanel.appendChild(projectNameEl);
+    // info popup: xp
+    const projectXpEl = document.createElement('div');
+    projectXpEl.className = 'text-green-600';
+    infoPanel.appendChild(projectXpEl);
+    // info popup: date
+    const projectDateEl = document.createElement('div');
+    infoPanel.appendChild(projectDateEl);
+
+    // Generate the SVG - use 100% width with proper aspect ratio preservation
+    const svg = `
+    <svg width="100%" height="100%" preserveAspectRatio="xMidYMid meet" viewBox="0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}">
+      <g transform="translate(${margin.left}, ${margin.top})">
+        <!-- X and Y axes -->
+        <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="#555" stroke-width="2" />
+        <line x1="0" y1="0" x2="0" y2="${height}" stroke="#555" stroke-width="2" />
+        
+        <!-- Bars -->
+        ${sortedData
+          .reverse()
+          .map((project, i) => {
+            // Ensure minimum height for visibility
+            const barHeight = Math.max(1, (project.amount / maxXP) * height);
+            const x = (width / sortedData.length) * i + (width / sortedData.length - barWidth) / 2;
+            const y = height - barHeight;
+
+            return `
+            <g id="graph-bars" data-project="${project.object.name}" data-xp="${project.amount}" data-date="${getDateRegex(project.createdAt)}">
+              <rect 
+                x="${x}" 
+                y="${y}" 
+                width="${barWidth}" 
+                height="${barHeight}" 
+                fill="#ff0000" 
+                opacity="0.8"
+                rx="2"
+              />
+            </g>
+          `;
+          })
+          .join('')}
+        
+        <!-- Y-axis labels (XP values) -->
+        ${[0, 0.25, 0.5, 0.75, 1]
+          .map((percent) => {
+            const yPos = height - height * percent;
+            const xpValue = Math.round(maxXP * percent);
+
+            return `
+            <g>
+              <line 
+                x1="-5" 
+                y1="${yPos}" 
+                x2="${width}" 
+                y2="${yPos}" 
+                stroke="#555" 
+                stroke-dasharray="5,5" 
+                opacity="0.3"
+              />
+              <text 
+                x="-10" 
+                y="${yPos + 5}" 
+                text-anchor="end" 
+                fill="white"
+                font-size="12px"
+              >
+                ${xpValue} XP
+              </text>
+            </g>
+          `;
+          })
+          .join('')}
+      </g>
+    </svg>
+  `;
+    // svg container
+    const svgContainer = document.createElement('div');
+    svgContainer.innerHTML = svg;
+    container.appendChild(svgContainer);
+
+    // Set a fixed height to maintain aspect ratio
+    svgContainer.style.height = '500px';
+
+    // Add event listeners for interactivity
+    this.querySelectorAll('#graph-bars').forEach((g) => {
+      g.addEventListener('mouseenter', function () {
+        const projectName = this.getAttribute('data-project');
+        const xpAmount = this.getAttribute('data-xp');
+        const date = this.getAttribute('data-date');
+        const rect = this.querySelector('rect');
+
+        // Highlight the bar
+        rect.setAttribute('opacity', '1');
+        rect.setAttribute('fill', '#ff000a');
+
+        // Update info panel content
+        projectNameEl.textContent = projectName;
+        projectXpEl.textContent = `[XP] ${ConvertXpToStr(xpAmount)}`;
+        projectDateEl.textContent = date;
+
+        // Show the info panel
+        infoPanel.classList.toggle('hidden');
+      });
+
+      g.addEventListener('mouseleave', function () {
+        const rect = this.querySelector('rect');
+        rect.setAttribute('opacity', '0.8');
+        rect.setAttribute('fill', '#ff0000');
+
+        // Hide the info panel
+        infoPanel.classList.toggle('hidden');
+      });
+    });
+  }
+
+  renderXPTimelineGraph(el, data) {
+    const container = document.createElement('div');
+    container.className = 'flex flex-col relative pt-4 bg-stone-700 rounded-lg';
+    el.appendChild(container);
+    // Early return if no data or empty array
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p>No project data available for this module.</p>';
+      return;
+    }
+
+    // Sort projects by creation date (oldest first)
+    const sortedData = [...data].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    // Calculate cumulative XP over time
+    let cumulativeXP = 0;
+    const timelineData = sortedData.map((item) => {
+      cumulativeXP += item.amount;
+      return {
+        date: new Date(item.createdAt),
+        amount: item.amount,
+        cumulative: cumulativeXP,
+        name: item.object?.name || 'Unknown Project',
+      };
+    });
+
+    // graph dimensions and margins
+    const margin = { top: 60, right: 30, bottom: 60, left: 80 };
+    const width = 800 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    // graph title
+    const graphTitle = document.createElement('h3');
+    graphTitle.className = 'self-center';
+    graphTitle.textContent = 'XP by Project (Oldest to Newest)';
+    container.appendChild(graphTitle);
+    // info popup
+    const infoPanel = document.createElement('div');
+    infoPanel.className = 'absolute bg-stone-600 top-[100px] left-1/2 -translate-x-1/2 w-2xs py-2 px-4 text-center z-10 rounded-lg hidden';
+    container.appendChild(infoPanel);
+    // info popup: name
+    const projectNameEl = document.createElement('div');
+    infoPanel.appendChild(projectNameEl);
+    // info popup: xp
+    const projectXpEl = document.createElement('div');
+    projectXpEl.className = 'text-green-600';
+    infoPanel.appendChild(projectXpEl);
+    // info popup: date
+    const projectDateEl = document.createElement('div');
+    infoPanel.appendChild(projectDateEl);
+    // cumulative
+    const cumulativeXpEl = document.createElement('div');
+    infoPanel.appendChild(cumulativeXpEl);
+
+    // Calculate X and Y scales
+    const dateRange = timelineData.map((d) => d.date);
+    const minDate = dateRange[0];
+    const maxDate = dateRange[dateRange.length - 1];
+    const maxXP = timelineData[timelineData.length - 1].cumulative;
+
+    // Calculate x depending on date
+    const getXPosition = (date) => {
+      const totalDays = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+      const daysPassed = (date - minDate) / (1000 * 60 * 60 * 24);
+      return (daysPassed / totalDays) * width;
+    };
+
+    // Calculate y depending on XP
+    const getYPosition = (xp) => {
+      return height - (xp / maxXP) * height;
+    };
+
+    // Line between project points
+    const linePath = timelineData
+      .map((point, i) => {
+        const x = getXPosition(point.date);
+        const y = getYPosition(point.cumulative);
+        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+      })
+      .join(' ');
+
+    // Generate area path (line + bottom enclosure)
+    const areaPath = `${linePath} L ${getXPosition(maxDate)} ${height} L ${getXPosition(minDate)} ${height} Z`;
+
+    // Generate the SVG
+    const svg = `
+    <svg width="100%" height="100%" preserveAspectRatio="xMidYMid meet" viewBox="0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}">
+      <defs>
+        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ab54f1" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#ab54f1" stop-opacity="0.2"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(${margin.left}, ${margin.top})">
+        <!-- X and Y axes -->
+        <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="#555" stroke-width="2" />
+        <line x1="0" y1="0" x2="0" y2="${height}" stroke="#555" stroke-width="2" />
+        
+        <!-- Area under the line -->
+        <path d="${areaPath}" fill="#ff0000" />
+        
+        <!-- Line graph -->
+        <path d="${linePath}" stroke="#b30000" stroke-width="3" fill="none" />
+        
+        <!-- Data points -->
+        ${timelineData
+          .map((point, i) => {
+            const x = getXPosition(point.date);
+            const y = getYPosition(point.cumulative);
+            const date = new Date(point.date);
+            const day = date.getDate() < 10 ? `0${date.getDate()}` : date.getDate();
+            const month = date.getMonth() + 1 < 10 ? `0${date.getMonth() + 1}` : date.getMonth() + 1;
+
+            return `
+            <g class="graph-point" 
+               data-index="${i}" 
+               data-project="${point.name}" 
+               data-xp="${point.amount}" 
+               data-date="${`${day}/${month}/${date.getFullYear()}`}" 
+               data-cumulative="${point.cumulative}">
+                <circle 
+                  cx="${x}" 
+                  cy="${y}" 
+                  r="4" 
+                  fill="#ffffff" 
+                  stroke="#000000" 
+                  stroke-width="2"
+                />
+            </g>`;
+          })
+          .join('')}
+        
+        <!-- Y-axis labels -->
+        ${[0, 0.25, 0.5, 0.75, 1]
+          .map((percent) => {
+            const yPos = height - height * percent;
+            const xpValue = Math.round(maxXP * percent);
+
+            return `
+            <g>
+                <line 
+                  x1="-5" 
+                  y1="${yPos}" 
+                  x2="${width}" 
+                  y2="${yPos}" 
+                  stroke="#555" 
+                  stroke-dasharray="5,5" 
+                  opacity="0.3"
+                />
+                <text 
+                  x="-10" 
+                  y="${yPos + 5}" 
+                  text-anchor="end" 
+                  fill="#e0e0e0"
+                  font-size="12px"
+                >
+                  ${ConvertXpToStr(xpValue)}
+                </text>
+            </g>`;
+          })
+          .join('')}
+        
+        <!-- X-axis labels -->
+        ${[0, 0.25, 0.5, 0.75, 1]
+          .map((percent) => {
+            const date = new Date(minDate.getTime() + (maxDate - minDate) * percent);
+            const xPos = getXPosition(date);
+
+            return `
+            <g>
+                <line 
+                  x1="${xPos}" 
+                  y1="${height + 5}" 
+                  x2="${xPos}" 
+                  y2="${height}" 
+                  stroke="#555" 
+                  stroke-width="1"
+                />
+                <text 
+                  x="${xPos}" 
+                  y="${height + 20}" 
+                  text-anchor="middle" 
+                  fill="#e0e0e0"
+                  font-size="12px"
+                >
+                  ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </text>
+            </g>`;
+          })
+          .join('')}
+      </g>
+    </svg>
+  `;
+
+    // svg container
+    const svgContainer = document.createElement('div');
+    svgContainer.innerHTML = svg;
+    container.appendChild(svgContainer);
+
+    svgContainer.style.height = '500px';
+
+    document.querySelectorAll('.graph-point').forEach((p) => {
+      p.addEventListener('mouseenter', function () {
+        const projectName = this.getAttribute('data-project');
+        const xpAmount = this.getAttribute('data-xp');
+        const date = this.getAttribute('data-date');
+        const cumulative = this.getAttribute('data-cumulative');
+        const circle = this.querySelector('circle');
+
+        // Highlight the point
+        circle.setAttribute('r', '6');
+        circle.setAttribute('stroke-width', '3');
+
+        projectNameEl.textContent = projectName;
+        projectXpEl.textContent = `Gained: ${ConvertXpToStr(xpAmount)}`;
+        projectDateEl.textContent = date;
+        cumulativeXpEl.textContent = `Total: ${ConvertXpToStr(cumulative)}`;
+
+        infoPanel.classList.toggle('hidden');
+      });
+
+      p.addEventListener('mouseleave', function () {
+        const circle = this.querySelector('circle');
+        circle.setAttribute('r', '4');
+        circle.setAttribute('stroke-width', '2');
+
+        infoPanel.classList.toggle('hidden');
+      });
+    });
   }
 
   afterRender() {
@@ -305,6 +726,14 @@ export class ProfilePage extends Base {
         div.appendChild(this.createAuditCard(e));
       });
       document.body.appendChild(modal);
+    });
+    // change graph
+    this.querySelectorAll('[id^="graph-btn-"]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        state.currentGraph = e.target.getAttribute('data-graph-id');
+        // await updateState(true);
+        this.init();
+      });
     });
     // logout
     this.querySelector('#logoutBtn').addEventListener('click', () => {

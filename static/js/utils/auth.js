@@ -2,7 +2,7 @@ import { state } from '../main.js';
 import { graphqlQuery } from './api.js';
 import { isModuleValid, loadModule, removeModule } from './current_module.js';
 import { CreateLoadingBtn } from './others.js';
-import { USER_AUDIT_QUERY, USER_INFO_QUERY, USER_MODULE_QUERY, USER_XP_LEVEL_QUERY, USER_XP_QUERY } from './queries.js';
+import { USER_AUDIT_QUERY, USER_INFO_QUERY, USER_MODULE_QUERY, USER_XP_LEVEL_QUERY, USER_XP_PER_PROJECT_QUERY, USER_XP_QUERY } from './queries.js';
 
 const app = document.body;
 
@@ -44,6 +44,7 @@ export async function updateState(changeModule = false) {
   if (changeModule || !state.user.xp.level) await fetchUserXpLevel();
   // user audit
   if (!state.user.audits) await fetchUserAudit();
+  if (changeModule || !state.user.xp.project) await fetchUserXpPerProject();
   loading.remove();
 }
 
@@ -72,4 +73,9 @@ export async function fetchUserXpLevel() {
 export async function fetchUserAudit() {
   const audits = await graphqlQuery(USER_AUDIT_QUERY(state.user.info.user[0].login, true));
   state.user.audits = audits.audit;
+}
+
+export async function fetchUserXpPerProject() {
+  const xpPerProject = await graphqlQuery(USER_XP_PER_PROJECT_QUERY(state.currentModule));
+  state.user.xp.project = xpPerProject.transaction;
 }

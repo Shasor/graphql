@@ -12,6 +12,7 @@ export class Base extends HTMLElement {
 
   init() {
     this.currentModule = state.currentModule;
+    this.currentGraph = state.currentGraph;
     this.user = state.user;
     this.render();
     this.afterRender();

@@ -28,3 +28,8 @@ export function CreateLoadingBtn() {
   button.appendChild(span);
   return button;
 }
+
+export function getDateRegex(val) {
+  const date = val.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return `${date[3]}/${date[2]}/${date[1]}`;
+}

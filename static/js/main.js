@@ -8,6 +8,7 @@ import { isJwtValid, loadJWT, removeJWT } from './utils/jwt.js';
 
 export const state = {
   currentModule: loadModule(),
+  currentGraph: 'project',
   user: {
     modules: null,
     info: null,
@@ -17,6 +18,7 @@ export const state = {
       level: null,
       up: null,
       down: null,
+      project: null,
     },
     audits: null,
   },
