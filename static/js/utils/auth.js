@@ -54,10 +54,11 @@ export async function fetchUserModules() {
 }
 
 export async function fetchUserInfo() {
-  state.user.info = await graphqlQuery(USER_INFO_QUERY);
-  state.user.xp.up = state.user.info.user[0].totalUp;
-  state.user.xp.down = state.user.info.user[0].totalDown;
-  state.user.attrs = state.user.info.user[0].attrs;
+  const info = await graphqlQuery(USER_INFO_QUERY);
+  state.user.info = info.user[0];
+  state.user.xp.up = state.user.info.totalUp;
+  state.user.xp.down = state.user.info.totalDown;
+  state.user.attrs = state.user.info.attrs;
 }
 
 export async function fetchUserXpAmount() {
@@ -66,12 +67,12 @@ export async function fetchUserXpAmount() {
 }
 
 export async function fetchUserXpLevel() {
-  const level = await graphqlQuery(USER_XP_LEVEL_QUERY(state.user.info.user[0].login, state.currentModule));
+  const level = await graphqlQuery(USER_XP_LEVEL_QUERY(state.user.info.login, state.currentModule));
   state.user.xp.level = level.event_user[0].level;
 }
 
 export async function fetchUserAudit() {
-  const audits = await graphqlQuery(USER_AUDIT_QUERY(state.user.info.user[0].login, true));
+  const audits = await graphqlQuery(USER_AUDIT_QUERY(state.user.info.login, true));
   state.user.audits = audits.audit;
 }
 

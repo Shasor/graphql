@@ -57,6 +57,11 @@ export class ProfilePage extends Base {
     div.className = 'flex-1';
     section.appendChild(div);
 
+    const profile = document.createElement('button');
+    profile.id = 'profile-btn';
+    profile.className = 'text-3xl nf nf-oct-people hover:text-red-600';
+    section.appendChild(profile);
+
     const logoutBtn = document.createElement('button');
     logoutBtn.id = 'logoutBtn';
 
@@ -575,7 +580,7 @@ export class ProfilePage extends Base {
         <line x1="0" y1="0" x2="0" y2="${height}" stroke="#555" stroke-width="2" />
         
         <!-- Area under the line -->
-        <path d="${areaPath}" fill="#ff0000" />
+        <path d="${areaPath}" fill="#32cd32" opacity="0.8" />
         
         <!-- Line graph -->
         <path d="${linePath}" stroke="#b30000" stroke-width="3" fill="none" />
@@ -602,7 +607,7 @@ export class ProfilePage extends Base {
                   r="4" 
                   fill="#ffffff" 
                   stroke="#000000" 
-                  stroke-width="2"
+                  stroke-width="1.5"
                 />
             </g>`;
           })
@@ -707,6 +712,57 @@ export class ProfilePage extends Base {
     });
   }
 
+  renderProfile(el) {
+    console.log(this.user.attrs);
+    // title
+    const title = document.createElement('div');
+    title.className = 'text-lg font-semibold border-b';
+    title.textContent = `${this.user.attrs.firstName} ${this.user.attrs.lastName}'s Profile`;
+    el.appendChild(title);
+    // define classes
+    const classes = 'text-sm leading-none font-medium bg-stone-700 size-fit p-2 rounded-lg';
+    // id
+    const id = document.createElement('div');
+    id.className = classes;
+    id.textContent = `ID: ${this.user.info.id}`;
+    el.appendChild(id);
+    // login
+    const login = document.createElement('div');
+    login.className = classes;
+    login.textContent = `Login: ${this.user.info.login}`;
+    el.appendChild(login);
+    // email
+    const email = document.createElement('div');
+    email.className = classes;
+    email.textContent = `Email: ${this.user.attrs.email}`;
+    el.appendChild(email);
+    // gender
+    const gender = document.createElement('div');
+    gender.className = classes;
+    gender.textContent = `Gender: ${this.user.attrs.gender}`;
+    el.appendChild(gender);
+    // date of birth (+conversion)
+    const date = new Date(this.user.attrs.dateOfBirth);
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = String(date.getUTCFullYear()).slice(-2);
+    const formatted = `${day}/${month}/${year}`;
+    const dateOfBirth = document.createElement('div');
+    dateOfBirth.className = classes;
+    dateOfBirth.textContent = `Date of Birth: ${formatted}`;
+    el.appendChild(dateOfBirth);
+    // country
+    const country = document.createElement('div');
+    country.className = classes;
+    country.textContent = `Country: ${this.user.attrs.country}`;
+    el.appendChild(country);
+    // Emergency contact
+    const contact = document.createElement('div');
+    contact.className = classes;
+    contact.textContent = `Emergency contact: ${this.user.attrs.emergencyFirstName} ${this.user.attrs.emergencyLastName} (${this.user.attrs.emergencyTel})`;
+    el.appendChild(contact);
+  }
+
   afterRender() {
     // change module
     this.querySelectorAll('[id^="module-btn-"]').forEach((btn) => {
@@ -735,7 +791,16 @@ export class ProfilePage extends Base {
         this.init();
       });
     });
-    // logout
+    // profile btn
+    this.querySelector('#profile-btn').addEventListener('click', () => {
+      const modal = document.createElement('c-modal');
+      document.body.appendChild(modal);
+      const div = document.createElement('div');
+      div.className = 'flex flex-col p-4 bg-stone-800 rounded-lg size-fit gap-4';
+      modal.appendChild(div);
+      this.renderProfile(div);
+    });
+    // logout btn
     this.querySelector('#logoutBtn').addEventListener('click', () => {
       removeJWT();
       this.dispatchEvent(new CustomEvent('logout', { bubbles: true }));
