@@ -1,5 +1,5 @@
-import { state } from '../main.js';
-import { loadState } from '../utils/auth.js';
+import { updateState } from '../utils/auth.js';
+import { saveModule } from '../utils/current_module.js';
 import { removeJWT } from '../utils/jwt.js';
 import { ConvertXpToStr } from '../utils/others.js';
 import { Base } from './Base.js';
@@ -69,6 +69,7 @@ export class ProfilePage extends Base {
     for (let i = 0; i < this.user.modules.length; i++) {
       const e = this.user.modules[i];
       const btn = document.createElement('div');
+      btn.id = `module-btn-${e.event.id}`;
       btn.textContent = e.event.object.name;
       btn.setAttribute('data-module-id', e.event.id);
       // Classes de base
@@ -82,12 +83,6 @@ export class ProfilePage extends Base {
 
       btn.className = classes;
       modulesDiv.appendChild(btn);
-
-      btn.addEventListener('click', async (e) => {
-        state.currentModule = parseInt(e.target.getAttribute('data-module-id'), 10);
-        await loadState();
-        this.init();
-      });
     }
   }
 
@@ -247,7 +242,6 @@ export class ProfilePage extends Base {
   }
 
   renderLastAudit(el) {
-    console.log(this.user.audits);
     el.appendChild(this.createAuditCard(this.user.audits[0], true));
   }
 
@@ -293,6 +287,14 @@ export class ProfilePage extends Base {
   }
 
   afterRender() {
+    // change module
+    this.querySelectorAll('[id^="module-btn-"]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        saveModule(e.target.getAttribute('data-module-id'));
+        await updateState(true);
+        this.init();
+      });
+    });
     // see more audits
     this.querySelector('#more-audit-btn').addEventListener('click', () => {
       const modal = document.createElement('c-modal');

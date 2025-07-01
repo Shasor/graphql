@@ -3,10 +3,11 @@ import { ModalElement } from './components/modal.js';
 import { ProfilePage } from './components/ProfilePage.js';
 import { Section } from './components/Section.js';
 import { showLogin, showProfile } from './utils/auth.js';
+import { loadModule } from './utils/current_module.js';
 import { isJwtValid, loadJWT, removeJWT } from './utils/jwt.js';
 
 export const state = {
-  currentModule: null,
+  currentModule: loadModule(),
   user: {
     modules: null,
     info: null,
