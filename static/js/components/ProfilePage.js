@@ -102,7 +102,7 @@ export class ProfilePage extends Base {
 
   renderUserStats(el) {
     const userStatsDiv = document.createElement('div');
-    userStatsDiv.className = 'flex gap-4 items-center';
+    userStatsDiv.className = 'flex flex-col gap-4 items-center md:flex-row';
     el.appendChild(userStatsDiv);
     // user level card
     this.renderUserLevelCard(userStatsDiv);
